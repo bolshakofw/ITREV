@@ -87,28 +87,28 @@ public class FileController {
     }
 
 
-    @GetMapping("/model")
-    public LinkedHashSet<FileData> model(@RequestBody ModelDTO modelDTO) {
-        List<FileData> list = fileStorage.getList();
-        LinkedHashSet<FileData> spisok = new LinkedHashSet();
-
-        for (FileData fileData : list) {
-            if(modelDTO.getFileName() != "") {
-                if (fileData.getFileName().contains(modelDTO.getFileName())) {
-                    spisok.add(fileData);
-                }
-            }
-            if(modelDTO.getFileType()!= ""){
-                if(fileData.getFileType().contains(modelDTO.getFileType())){
-                    spisok.add(fileData);
-                }
-            }
-
-
-        }
-
-        return spisok;
-    }
+//    @GetMapping("/model")
+//    public LinkedHashSet<FileData> model(@RequestBody ModelDTO modelDTO) {
+//        List<FileData> list = fileStorage.getList();
+//        LinkedHashSet<FileData> spisok = new LinkedHashSet();
+//
+//        for (FileData fileData : list) {
+//            if(modelDTO.getFileName() != "") {
+//                if (fileData.getFileName().contains(modelDTO.getFileName())) {
+//                    spisok.add(fileData);
+//                }
+//            }
+//            if(modelDTO.getFileType()!= ""){
+//                if(fileData.getFileType().contains(modelDTO.getFileType())){
+//                    spisok.add(fileData);
+//                }
+//            }
+//
+//
+//        }
+//
+//        return spisok;
+//    }
 
     @GetMapping("/download/{fileName}")
     public HttpEntity<byte[]> download(@RequestBody FileDownloadDTO fileDownloadDTO) throws IOException {
