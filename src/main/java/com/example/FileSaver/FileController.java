@@ -3,6 +3,9 @@ package com.example.FileSaver;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -11,6 +14,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.io.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +41,16 @@ public class FileController {
 
     }
 
+    @GetMapping("/getList")
+    public List<String> getList() {
+        List<FileData> list = fileStorage.getList();
+        List<String> names = new ArrayList<>();
+        for (FileData fileData : list) {
+            names.add(fileData.getFileName());
+        }
+        return names;
+    }
+
     @GetMapping("/getFile")
     public ArrayList<FileData> getFile(@RequestParam("fileName") String fileName) {
         List<FileData> list = fileStorage.getList();
@@ -50,15 +64,6 @@ public class FileController {
 
     }
 
-    @GetMapping("/getList")
-    public List<String> getList() {
-        List<FileData> list = fileStorage.getList();
-        List<String> names = new ArrayList<>();
-        for (FileData fileData : list) {
-            names.add(fileData.getFileName());
-        }
-        return names;
-    }
 
     @DeleteMapping("/delete")
     public void delete(@RequestParam("id") UUID id) {
@@ -82,17 +87,52 @@ public class FileController {
     }
 
 
-    @GetMapping("/download")
-    public File download(@RequestParam("id") UUID id) throws IOException {
+    @GetMapping("/model")
+    public LinkedHashSet<FileData> model(@RequestBody ModelDTO modelDTO) {
+        List<FileData> list = fileStorage.getList();
+        LinkedHashSet<FileData> spisok = new LinkedHashSet();
+
+        for (FileData fileData : list) {
+            if(modelDTO.getFileName() != "") {
+                if (fileData.getFileName().contains(modelDTO.getFileName())) {
+                    spisok.add(fileData);
+                }
+            }
+            if(modelDTO.getFileType()!= ""){
+                if(fileData.getFileType().contains(modelDTO.getFileType())){
+                    spisok.add(fileData);
+                }
+            }
+
+
+        }
+
+        return spisok;
+    }
+
+    @GetMapping("/download/{fileName}")
+    public HttpEntity<byte[]> download(@RequestBody FileDownloadDTO fileDownloadDTO) throws IOException {
+
         List<FileData> list = fileStorage.getList();
 
         for (FileData fileData : list) {
-            if (fileData.getId().equals(id)) {
-                File file = new File(fileData.getFileName());
-                FileOutputStream fos = new FileOutputStream(file);
-                fos.write(fileData.getBytes());
-                return file;
+            if (fileData.getId().equals(fileDownloadDTO.getId())) {
+                String fileName = fileData.getFileName();
+                byte[] bytes = fileData.getBytes();
+                HttpHeaders head = new HttpHeaders();
+                switch (fileData.getFileType()) {
+                    case ("image/png") -> head.setContentType(MediaType.valueOf(MediaType.IMAGE_PNG_VALUE));
+                    case ("text/plain") -> head.setContentType(MediaType.valueOf(MediaType.TEXT_PLAIN_VALUE));
+                    case ("image/jpeg") -> head.setContentType(MediaType.valueOf(MediaType.IMAGE_JPEG_VALUE));
+                    case ("application/pdf") -> head.setContentType(MediaType.valueOf(MediaType.APPLICATION_PDF_VALUE));
+                    case ("*/*") -> head.setContentType(MediaType.valueOf(MediaType.ALL_VALUE));
+                }
 
+                head.set(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + fileData.getFileName().replace(" ", ""));
+                head.setContentLength(bytes.length);
+
+                return new HttpEntity<byte[]>(bytes, head);
             }
         }
         return null;
