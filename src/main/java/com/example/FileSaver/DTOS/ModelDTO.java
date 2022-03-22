@@ -1,4 +1,4 @@
-package com.example.FileSaver;
+package com.example.FileSaver.DTOS;
 
 import lombok.Data;
 
