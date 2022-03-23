@@ -1,13 +1,10 @@
 package com.example.FileSaver;
 
 
-import com.example.FileSaver.DTOS.ChangeFileDto;
-import com.example.FileSaver.DTOS.FileDownloadDTO;
-import com.example.FileSaver.DTOS.ModelDTO;
+import com.example.FileSaver.DTO.ChangeFileDto;
 import com.example.FileSaver.service.FileService;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,9 +22,8 @@ public class FileController {
 
 
     @PostMapping("/upload")
-    public FileData upload(@RequestBody MultipartFile file) throws IOException {
+    public void upload(@RequestBody MultipartFile file) throws IOException {
         fileService.uploadFile(file);
-        return new FileData();
     }
 
     @GetMapping("/getList")
@@ -36,7 +32,7 @@ public class FileController {
     }
 
     @GetMapping("/getFile")
-    public ArrayList<FileData> getFile(@RequestParam("fileName") String fileName) {
+    public List<String> getFile(@RequestParam("id") String fileName) {
         return fileService.getFile(fileName);
     }
 
@@ -52,16 +48,5 @@ public class FileController {
         fileService.changeFile(changeFileDto);
     }
 
-
-    @GetMapping("/model")
-    public List<FileData> model(@RequestBody ModelDTO modelDTO) {
-        return fileService.getModel(modelDTO);
-    }
-
-    @GetMapping("/download/{fileName}")
-    public HttpEntity<byte[]> download(@PathVariable String fileName,FileDownloadDTO fileDownloadDTO) {
-        return fileService.download(fileDownloadDTO);
-
-    }
 
 }

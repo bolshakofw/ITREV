@@ -7,6 +7,7 @@ import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -18,13 +19,14 @@ public class FileData {
     private String fileType;
 
     private long fileSize;
-    private LocalDate load;
-    private LocalDate change;
+    private Timestamp load;
+    private Timestamp change;
 
     @JsonIgnore
     private byte[] bytes;
 
     private String fileDownloadUri;
+
 
 
 }
