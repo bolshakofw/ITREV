@@ -3,17 +3,19 @@ package com.example.FileSaver.DTO;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 
 
 @Data
 public class ModelDTO {
-    @NotNull
+
     private String fileName;
-    @NotNull
+
     private String fileType;
 
-    private LocalDate dateOfChange;
+    private Timestamp dateOfChange;
 
 
 

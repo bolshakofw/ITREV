@@ -2,9 +2,13 @@ package com.example.FileSaver;
 
 
 import com.example.FileSaver.DTO.ChangeFileDto;
+import com.example.FileSaver.DTO.ModelDTO;
 import com.example.FileSaver.service.FileService;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,7 +36,7 @@ public class FileController {
     }
 
     @GetMapping("/getFile")
-    public List<String> getFile(@RequestParam("id") String fileName) {
+    public FileData getFile(@RequestParam("fileName") String fileName) {
         return fileService.getFile(fileName);
     }
 
@@ -49,4 +53,24 @@ public class FileController {
     }
 
 
+    @GetMapping("/download/{id}")
+    public HttpEntity<byte[]> download(@PathVariable UUID id) {
+        return fileService.download(id);
+    }
+
+
+    @GetMapping("/downloadZip")
+    public HttpEntity<byte[]> downloadZip(@RequestParam UUID[] ids) throws IOException {
+        byte[] body = fileService.downloadZip(ids);
+        HttpHeaders header = new HttpHeaders();
+        header.set("Content-Disposition", "attachment; filename=" + "files.zip");
+
+        header.setContentLength(body.length);
+        return new HttpEntity<>(body, header);
+    }
+
+    @GetMapping("/model")
+    public ArrayList<FileData> model(@RequestBody ModelDTO modelDTO) {
+        return fileService.model(modelDTO);
+    }
 }
