@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 
 
 @RestController
+@RequestMapping("/api/file")
 @RequiredArgsConstructor
 public class FileController {
 
@@ -32,34 +33,29 @@ public class FileController {
         return fileService.uploadFile(file);
     }
 
-    @GetMapping("/getList")
+    @GetMapping("/names")
     public List<String> getList() {
         return fileService.getList();
     }
 
-    @GetMapping("/getFile")
-    public FileData getFile(@RequestParam("fileName") String fileName) {
-        return fileService.getFile(fileName);
-    }
 
-
-    @DeleteMapping("/delete")
-    public void delete(@RequestParam("id") UUID id) {
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable UUID id) {
         fileService.delete(id);
     }
 
 
-    @PutMapping("/changeFile")
+    @PutMapping
     public void changeFile(@RequestBody ChangeFileDto changeFileDto) {
         fileService.changeFile(changeFileDto);
     }
 
 
-    @GetMapping("/model")
-    public Stream<FileData> model(@RequestParam("name") String fileName,
-                                  @RequestParam("type") String fileType,
-                                  @RequestParam("from") long fromDate,
-                                  @RequestParam("till") long tillDate) {
+    @GetMapping("/filter")
+    public List<FileData> model(@RequestParam("name") String fileName,
+                                @RequestParam("type") String fileType,
+                                @RequestParam("from") Long fromDate,
+                                @RequestParam("till") Long tillDate) {
         return fileService.model(fileName, fileType, fromDate, tillDate);
     }
 
@@ -69,8 +65,8 @@ public class FileController {
     }
 
 
-    @GetMapping("/downloadZip/{ids}")
-    public HttpEntity<byte[]> downloadZip(@PathVariable UUID[] ids) throws IOException {
+    @GetMapping("/download/zip/{ids}")
+    public HttpEntity<byte[]> downloadZip(@RequestParam UUID[] ids) throws IOException {
 
         byte[] body = fileService.downloadZip(ids);
         HttpHeaders header = new HttpHeaders();

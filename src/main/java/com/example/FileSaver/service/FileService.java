@@ -10,12 +10,14 @@ import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -25,7 +27,7 @@ import java.util.zip.ZipOutputStream;
 public class FileService {
 
 
-    private static final List<String> CONTENT_TYPES = Arrays.asList("image/png", "image/jpeg", "image/gif", "text/plain", "pdf/application");
+    private static final List<String> CONTENT_TYPES = List.of("image/png", "image/jpeg", "image/gif", "text/plain", "pdf/application");
     private static final long MAX_SIZE = 15 * 1024 * 1024;
     private final LinkedList<FileData> list = new LinkedList<>();
 
@@ -46,7 +48,11 @@ public class FileService {
         fileData.setLoad(new Timestamp(System.currentTimeMillis()));
         fileData.setChange(new Timestamp(System.currentTimeMillis()));
         fileData.setBytes(file.getBytes());
-        fileData.setFileDownloadUri(ServletUriComponentsBuilder.fromCurrentServletMapping().path("/download/").path(fileData.getId().toString()).toUriString());
+        fileData.setFileDownloadUri(ServletUriComponentsBuilder
+                .fromCurrentServletMapping()
+                .path("/download/")
+                .path(fileData.getId().toString())
+                .toUriString());
 
         list.add(fileData);
         return fileData;
@@ -55,27 +61,17 @@ public class FileService {
 
     public List<String> getList() {
 
-        List<String> names = new ArrayList<>();
-        for (FileData fileData : list) {
-            names.add(fileData.getFileName());
-        }
-        return names;
+        return list.stream()
+                .map(FileData::getFileName)
+                .collect(Collectors.toList());
     }
 
-    public FileData getFile(String fileName) {
-        for (FileData fileData : list) {
-            if (fileData.getFileName().contains(fileName)) {
-                return fileData;
-            }
-        }
-        return null;
-    }
 
     public void delete(UUID id) {
-        list.removeIf(fileData -> fileData.getId().equals(id));
+        list.removeIf(it -> it.getId().equals(id));
     }
 
-    public void changeFile(ChangeFileDto changeFileDto)  {
+    public void changeFile(ChangeFileDto changeFileDto) {
         for (FileData fileData : list) {
             if (fileData.getId().equals(changeFileDto.getId())) {
                 fileData.setFileName(changeFileDto.getFileName());
@@ -87,21 +83,13 @@ public class FileService {
     }
 
     public HttpEntity<byte[]> download(UUID id) {
-        int count = 0;
-        for(FileData fileData:list){
-            if(fileData.getId().equals(id)){
-                count+=1;
-            }
-        }
-        if(count==0){
-            throw  new FileNotFoundException("File not found");
-        }
+        checkExists(id);
 
         for (FileData fileData : list) {
             if (fileData.getId().equals(id)) {
                 byte[] body = fileData.getBytes();
                 HttpHeaders header = new HttpHeaders();
-                header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileData.getFileName());
+                header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = " + fileData.getFileName());
                 header.setContentLength(fileData.getFileSize());
                 return new HttpEntity<>(body, header);
             }
@@ -109,44 +97,47 @@ public class FileService {
         return null;
     }
 
+    private void checkExists(UUID id) {
+        if (list.stream().noneMatch(it -> it.getId().equals(id))) {
+            throw new FileNotFoundException("File not found");
+        }
+    }
+
 
     public byte[] downloadZip(UUID[] uuids) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ZipOutputStream zos = new ZipOutputStream(bos);
-        for (FileData fileData : list) {
-            if (Arrays.stream(uuids).toList().contains(fileData.getId())) {
-                zos.putNextEntry(new ZipEntry(fileData.getFileName()));
-                zos.write(fileData.getBytes());
+        try (ZipOutputStream zos = new ZipOutputStream(bos);) {
+            for (FileData fileData : list) {
+                if (Arrays.stream(uuids).toList().contains(fileData.getId())) {
+                    zos.putNextEntry(new ZipEntry(fileData.getFileName()));
+                    zos.write(fileData.getBytes());
+                }
             }
-
-
+            zos.closeEntry();
         }
-        zos.closeEntry();
-        zos.close();
         return bos.toByteArray();
     }
 
-    public Stream<FileData> model(String fileName,String fileType,Long tillDate,Long fromDate){
+    public List<FileData> model(String fileName, String fileType, Long tillDate, Long fromDate) {
         Stream<FileData> fileInfo = list.stream();
 
 
-
-        if(fileName != null && !fileName.isEmpty())
+        if (StringUtils.hasLength(fileName))
             fileInfo = fileInfo.filter(fileData -> fileData.getFileName().contains(fileName));
 
-        if(fileType != null && !fileType.isEmpty())
+        if (StringUtils.hasLength(fileType))
             fileInfo = fileInfo.filter(fileData -> fileData.getFileType().contains(fileType));
 
-        if (fromDate!=null){
+        if (!Objects.isNull(fromDate)) {
             fileInfo = fileInfo.filter(fileData -> fileData.getChange().getTime() > fromDate);
         }
 
-        if (tillDate!=null){
+        if (!Objects.isNull(tillDate)) {
             fileInfo = fileInfo.filter(fileData -> fileData.getChange().getTime() > tillDate);
         }
 
 
-        return fileInfo;
+        return fileInfo.collect(Collectors.toList());
     }
 
 }
