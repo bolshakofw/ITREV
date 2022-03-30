@@ -1,0 +1,6 @@
+file:
+  size:
+    max: 15000000000
+    type: MB
+    min: 1
+

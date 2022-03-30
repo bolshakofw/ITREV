@@ -2,21 +2,17 @@ package com.example.FileSaver.controller;
 
 
 import com.example.FileSaver.DTO.ChangeFileDto;
-
 import com.example.FileSaver.FileData;
 import com.example.FileSaver.service.FileService;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-
-import java.io.*;
-import java.util.*;
-import java.util.stream.Stream;
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 
 
 @RestController
@@ -30,12 +26,12 @@ public class FileController {
 
     @PostMapping("/upload")
     public FileData upload(@RequestBody MultipartFile file) throws IOException {
-        return fileService.uploadFile(file);
+        return fileService.upload(file);
     }
 
     @GetMapping("/names")
-    public List<String> getList() {
-        return fileService.getList();
+    public List<String> names() {
+        return fileService.names();
     }
 
 
@@ -46,17 +42,17 @@ public class FileController {
 
 
     @PutMapping
-    public void changeFile(@RequestBody ChangeFileDto changeFileDto) {
-        fileService.changeFile(changeFileDto);
+    public void change(@RequestBody ChangeFileDto changeFileDto) {
+        fileService.change(changeFileDto);
     }
 
 
     @GetMapping("/filter")
-    public List<FileData> model(@RequestParam("name") String fileName,
-                                @RequestParam("type") String fileType,
-                                @RequestParam("from") Long fromDate,
-                                @RequestParam("till") Long tillDate) {
-        return fileService.model(fileName, fileType, fromDate, tillDate);
+    public List<FileData> filter(@RequestParam(value = "name", required = false) String fileName,
+                                 @RequestParam(value = "type", required = false) String fileType,
+                                 @RequestParam(value = "from", required = false) Long fromDate,
+                                 @RequestParam(value = "till", required = false) Long tillDate) {
+        return fileService.filter(fileName, fileType, fromDate, tillDate);
     }
 
     @GetMapping("/download/{id}")
@@ -65,9 +61,8 @@ public class FileController {
     }
 
 
-    @GetMapping("/download/zip/{ids}")
-    public HttpEntity<byte[]> downloadZip(@RequestParam UUID[] ids) throws IOException {
-
+    @GetMapping("/download/zip")
+    public HttpEntity<byte[]> downloadZip(@RequestParam("ids") UUID[] ids) throws IOException {
         byte[] body = fileService.downloadZip(ids);
         HttpHeaders header = new HttpHeaders();
         header.set("Content-Disposition", "attachment; filename=" + "files.zip");

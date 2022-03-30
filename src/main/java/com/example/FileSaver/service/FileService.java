@@ -2,11 +2,13 @@ package com.example.FileSaver.service;
 
 import com.example.FileSaver.DTO.ChangeFileDto;
 import com.example.FileSaver.FileData;
+import com.example.FileSaver.exceptions.EmptyFieldException;
 import com.example.FileSaver.exceptions.FileNotFoundException;
-import com.example.FileSaver.exceptions.WrongFileSizeException;
-import com.example.FileSaver.exceptions.WrongFileTypeException;
+import com.example.FileSaver.exceptions.InvalidFileSizeException;
+import com.example.FileSaver.exceptions.InvalidFileTypeException;
 import lombok.RequiredArgsConstructor;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -28,15 +30,18 @@ public class FileService {
 
 
     private static final List<String> CONTENT_TYPES = List.of("image/png", "image/jpeg", "image/gif", "text/plain", "pdf/application");
-    private static final long MAX_SIZE = 15 * 1024 * 1024;
     private final LinkedList<FileData> list = new LinkedList<>();
 
+    @Value("${file.size.max}")
+    private Long maxSize;
 
-    public FileData uploadFile(MultipartFile file) throws IOException {
+    public FileData upload(MultipartFile file) throws IOException {
         if (!CONTENT_TYPES.contains((file.getContentType()))) {
-            throw new WrongFileTypeException("Wrong file type");
-        } else if (!(file.getSize() < MAX_SIZE)) {
-            throw new WrongFileSizeException("File too big");
+            throw new InvalidFileTypeException(file.getContentType() + " not a valid file type , supported file types " + CONTENT_TYPES);
+        } else if (!(file.getSize() < maxSize)) {
+            throw new InvalidFileSizeException("The file size is more than " + maxSize);
+        } else if (file.getOriginalFilename() == null || file.getOriginalFilename().isEmpty()) {
+            throw new EmptyFieldException("Empty filename or file not received");
         }
 
         FileData fileData = new FileData();
@@ -59,7 +64,7 @@ public class FileService {
     }
 
 
-    public List<String> getList() {
+    public List<String> names() {
 
         return list.stream()
                 .map(FileData::getFileName)
@@ -71,7 +76,7 @@ public class FileService {
         list.removeIf(it -> it.getId().equals(id));
     }
 
-    public void changeFile(ChangeFileDto changeFileDto) {
+    public void change(ChangeFileDto changeFileDto) {
         for (FileData fileData : list) {
             if (fileData.getId().equals(changeFileDto.getId())) {
                 fileData.setFileName(changeFileDto.getFileName());
@@ -105,36 +110,40 @@ public class FileService {
 
 
     public byte[] downloadZip(UUID[] uuids) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(bos);) {
-            for (FileData fileData : list) {
-                if (Arrays.stream(uuids).toList().contains(fileData.getId())) {
-                    zos.putNextEntry(new ZipEntry(fileData.getFileName()));
-                    zos.write(fileData.getBytes());
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            try (ZipOutputStream zos = new ZipOutputStream(bos)) {
+                for (FileData fileData : list) {
+                    if (Arrays.stream(uuids).toList().contains(fileData.getId())) {
+                        zos.putNextEntry(new ZipEntry(fileData.getFileName()));
+                        zos.write(fileData.getBytes());
+                    }
                 }
+                zos.closeEntry();
             }
-            zos.closeEntry();
+            return bos.toByteArray();
         }
-        return bos.toByteArray();
     }
 
-    public List<FileData> model(String fileName, String fileType, Long tillDate, Long fromDate) {
+    public List<FileData> filter(String fileName, String fileType, Long tillDate, Long fromDate) {
         Stream<FileData> fileInfo = list.stream();
-
 
         if (StringUtils.hasLength(fileName))
             fileInfo = fileInfo.filter(fileData -> fileData.getFileName().contains(fileName));
 
+
         if (StringUtils.hasLength(fileType))
             fileInfo = fileInfo.filter(fileData -> fileData.getFileType().contains(fileType));
+
 
         if (!Objects.isNull(fromDate)) {
             fileInfo = fileInfo.filter(fileData -> fileData.getChange().getTime() > fromDate);
         }
 
+
         if (!Objects.isNull(tillDate)) {
             fileInfo = fileInfo.filter(fileData -> fileData.getChange().getTime() > tillDate);
         }
+
 
 
         return fileInfo.collect(Collectors.toList());
